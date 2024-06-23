@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, redirect,session
-from analyze import Analyze
+#from analyze import Analyze
 from spotify import Spotify
 import requests, urllib
 from flask_cors import CORS

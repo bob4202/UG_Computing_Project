@@ -1,6 +1,8 @@
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+from collections import defaultdict
 import urllib.parse
+import json
 import time
 
 REDIRECT_URI = "http://127.0.0.1:5000/callback"  # Adjust port as per your Flask app port
@@ -59,15 +61,21 @@ class Spotify:
                 track_mood = self.get_track_mood(track_id)
                 temp_dict = {"id": track_id, "mood": track_mood}
                 artists_dict[track_name] = temp_dict
-        
-        
-
-        return self.tracks_dict
+                organized_tracks =self.organize_by_mood(artists_dict)
+                
+        return organized_tracks
+    
     def fetch_audio_features_with_retry(self,track_id, retries=5, backoff_factor=2):
         for attempt in range(retries):
             try:
                 audio_features = self.sp.audio_features(track_id)
-                return audio_features[0] if audio_features else None
+                if audio_features:
+                    energy = audio_features[0]['energy']
+                    valence = audio_features[0]['valence']
+                    mood = self.get_mood(valence, energy)
+                    return mood
+                else:
+                    return print("No audio features found for track.")
             except spotipy.SpotifyException as e:
                 if e.http_status == 429:
                     print(f"Rate limit exceeded. Waiting {2**attempt} seconds before retrying.")
@@ -93,6 +101,26 @@ class Spotify:
         except Exception as e:
             print(f"Error retrieving audio features for track {track_id}: {e}")
             return None
+        
+    def organize_by_mood(self, data):
+        organized_data = {}
+
+        for track_name, track_info in data.items():
+            mood = track_info['mood']
+            track_id = track_info['id']
+
+            if mood not in organized_data:
+                organized_data[mood] = []
+
+            organized_data[mood].append({
+                "trackname": track_name,
+                "id": track_id
+            })
+
+        return organized_data
+
+            
+
 
     def get_mood(self, valence, energy):
         weight_valence = 0.5
