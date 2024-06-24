@@ -49,21 +49,61 @@ class Spotify:
 
 
     def final_data(self):
-        data = self.get_top_artists(limit=10, time_range="long_term")
-        artists_dict = {}
-        for artist in data["items"]:
-            artist_id = artist["id"]
-            artist_name = artist["name"]
-            artist_top_tracks = self.sp.artist_top_tracks(artist_id)
-            for track in artist_top_tracks["tracks"]:
-                track_name = track["name"]
-                track_id = track["id"]
-                track_mood = self.get_track_mood(track_id)
-                temp_dict = {"id": track_id, "mood": track_mood}
-                artists_dict[track_name] = temp_dict
-                organized_tracks =self.organize_by_mood(artists_dict)
+        try:
+            data = self.get_top_artists(limit=10, time_range="long_term")
+            artists_dict = {}
+            
+            for artist in data["items"]:
+                artist_id = artist["id"]
+                artist_name = artist["name"]
                 
-        return organized_tracks
+                # Retrieve top tracks for the artist
+                try:
+                    artist_top_tracks = self.sp.artist_top_tracks(artist_id)
+                except spotipy.SpotifyException as e:
+                    print(f"Error fetching top tracks for artist {artist_name}: {e}")
+                    continue
+                
+                for track in artist_top_tracks["tracks"]:
+                    track_name = track["name"]
+                    track_id = track["id"]
+                    
+                    # Get mood for the track
+                    try:
+                        track_mood = self.get_track_mood(track_id)
+                    except Exception as e:
+                        print(f"Error fetching mood for track {track_name} ({track_id}): {e}")
+                        track_mood = "unknown"
+                    
+                    temp_dict = {"id": track_id, "mood": track_mood}
+                    artists_dict[track_name] = temp_dict
+            
+            organized_tracks = self.organize_by_mood(artists_dict)
+            return organized_tracks
+    
+        except Exception as e:
+            print(f"An error occurred in final_data function: {e}")
+            return None
+
+    # def final_data(self):
+    #     data = self.get_top_artists(limit=10, time_range="long_term")
+    #     artists_dict = {}
+    #     for artist in data["items"]:
+    #         artist_id = artist["id"]
+    #         artist_name = artist["name"]
+    #         artist_top_tracks = self.sp.artist_top_tracks(artist_id)
+    #         for track in artist_top_tracks["tracks"]:
+    #             track_name = track["name"]
+    #             track_id = track["id"]
+    #             track_mood = self.get_track_mood(track_id)
+
+    #             temp_dict = {"id": track_id, "mood": track_mood}
+
+    #             artists_dict[track_name] = temp_dict
+        
+    #     organized_tracks =self.organize_by_mood(artists_dict)
+                
+    #     return organized_tracks
     
     def fetch_audio_features_with_retry(self,track_id, retries=5, backoff_factor=2):
         for attempt in range(retries):

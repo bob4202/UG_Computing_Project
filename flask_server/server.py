@@ -17,6 +17,7 @@ CLIENT_SECRET = "f7d53bbf159c4a60a8df92fdc7250c04"
 # FILE_PATH = "./uploads/"
 
 spotify = Spotify(CLIENT_ID,CLIENT_SECRET)
+
 # analyze = Analyze(FILE_PATH)
 
 

@@ -11,6 +11,7 @@ v2_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['ac
 class Analyze:
     def __init__(self,image_path):
         self.image_path = image_path
+        
 
     def analyze_emotion(self):
         img_array = self.preprocess_image(self.image_path)
