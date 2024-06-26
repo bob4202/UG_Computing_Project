@@ -38,8 +38,6 @@ def upload_file():
         return jsonify({'message': 'File uploaded successfully'})
     else:
         return jsonify({'error': 'Invalid file extension'})
-    
-
 # Register a function to delete uploaded files after the request
 @app.after_request
 def delete_uploaded_files(response):

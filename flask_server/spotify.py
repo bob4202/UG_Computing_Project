@@ -1,15 +1,10 @@
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from collections import defaultdict
-import urllib.parse
 import json
 import time
 
 REDIRECT_URI = "http://127.0.0.1:5000/callback"  # Adjust port as per your Flask app port
-AUTH_URL = "https://accounts.spotify.com/authorize"
-TOKEN_URL = "https://accounts.spotify.com/api/token"
-API_BASE_URL = "https://api.spotify.com/v1"
-
 
 class Spotify:
     def __init__(self, client_id, client_secret):
@@ -19,12 +14,11 @@ class Spotify:
             client_id=self.client_id,
             client_secret=self.client_secret,
             redirect_uri=REDIRECT_URI,
-            scope="user-top-read",
+            scope="user-top-read playlist-modify-private playlist-modify-public",
             cache_path=".spotifycache",
             show_dialog=True
         )
-        self.sp = spotipy.Spotify(auth_manager=self.oauth),
-        
+        self.sp = spotipy.Spotify(auth_manager=self.oauth)
 
     def get_authorize_url(self):
         return self.oauth.get_authorize_url()
@@ -45,12 +39,13 @@ class Spotify:
     def get_top_artists(self, limit=10, time_range="long_term"):
         results = self.sp.current_user_top_artists(limit=limit, time_range=time_range)
         return results
-    
 
-
-    def final_data(self):
+    def final_data(self, user_emotion):
         try:
             data = self.get_top_artists(limit=10, time_range="long_term")
+            
+            current_user_emotion = user_emotion.lower()
+            print(f"Current user emotion: {current_user_emotion}")
             artists_dict = {}
             
             for artist in data["items"]:
@@ -79,33 +74,15 @@ class Spotify:
                     artists_dict[track_name] = temp_dict
             
             organized_tracks = self.organize_by_mood(artists_dict)
-            return organized_tracks
+            user_track = organized_tracks[current_user_emotion]
+            self.create_playlist(user_track, current_user_emotion)
+            return user_track
     
         except Exception as e:
             print(f"An error occurred in final_data function: {e}")
             return None
-
-    # def final_data(self):
-    #     data = self.get_top_artists(limit=10, time_range="long_term")
-    #     artists_dict = {}
-    #     for artist in data["items"]:
-    #         artist_id = artist["id"]
-    #         artist_name = artist["name"]
-    #         artist_top_tracks = self.sp.artist_top_tracks(artist_id)
-    #         for track in artist_top_tracks["tracks"]:
-    #             track_name = track["name"]
-    #             track_id = track["id"]
-    #             track_mood = self.get_track_mood(track_id)
-
-    #             temp_dict = {"id": track_id, "mood": track_mood}
-
-    #             artists_dict[track_name] = temp_dict
-        
-    #     organized_tracks =self.organize_by_mood(artists_dict)
-                
-    #     return organized_tracks
     
-    def fetch_audio_features_with_retry(self,track_id, retries=5, backoff_factor=2):
+    def fetch_audio_features_with_retry(self, track_id, retries=5, backoff_factor=2):
         for attempt in range(retries):
             try:
                 audio_features = self.sp.audio_features(track_id)
@@ -115,7 +92,7 @@ class Spotify:
                     mood = self.get_mood(valence, energy)
                     return mood
                 else:
-                    return print("No audio features found for track.")
+                    return "unknown"
             except spotipy.SpotifyException as e:
                 if e.http_status == 429:
                     print(f"Rate limit exceeded. Waiting {2**attempt} seconds before retrying.")
@@ -125,14 +102,13 @@ class Spotify:
         return None
 
     def get_related_artists(self, artist_id):
-        total_artists = 5
         related_artists = self.sp.artist_related_artists(artist_id)
         related_artist = {}
-        while total_artists <= 5:
-            for artist in related_artists['items']:
-                related_artist[artist]
-                total_artists -= 1
-                
+        total_artists = 0
+        for artist in related_artists['items']:
+            if total_artists < 5:
+                related_artist[artist['name']] = artist['id']
+                total_artists += 1
         return related_artist
 
     def get_track_mood(self, track_id):
@@ -140,7 +116,7 @@ class Spotify:
             return self.fetch_audio_features_with_retry(track_id)
         except Exception as e:
             print(f"Error retrieving audio features for track {track_id}: {e}")
-            return None
+            return "unknown"
         
     def organize_by_mood(self, data):
         organized_data = {}
@@ -159,9 +135,6 @@ class Spotify:
 
         return organized_data
 
-            
-
-
     def get_mood(self, valence, energy):
         weight_valence = 0.5
         weight_energy = 0.5
@@ -174,3 +147,31 @@ class Spotify:
             return "sad"
         else:
             return "neutral"
+
+    def create_playlist(self, music,emotion):
+        try:
+            user_id = self.sp.current_user()["id"]
+            user_playlist = self.sp.user_playlist_create(
+                user=user_id,
+                name=emotion,
+                public=False,
+                collaborative=False,
+                description="Playlist generated using the emotion analyzer"
+            )
+            user_playlist_id = user_playlist["id"]
+            
+            tracks_to_add = [track['id'] for track in music]
+            self.sp.user_playlist_add_tracks(
+                user=user_id,
+                playlist_id=user_playlist_id,
+                tracks=tracks_to_add
+            )
+
+            print(f"Playlist created with {len(music)} tracks")
+            return user_playlist_id
+        
+        except spotipy.SpotifyException as e:
+            print(f"Error creating playlist: {e}")
+            return None
+
+            

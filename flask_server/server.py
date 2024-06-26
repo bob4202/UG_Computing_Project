@@ -1,32 +1,27 @@
-from flask import Flask, request, jsonify, redirect,session
-#from analyze import Analyze
+from flask import Flask, request, jsonify, redirect, session
+from analyze import Analyze
 from spotify import Spotify
-import requests, urllib
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
-import datetime
 import os
 
 app = Flask(__name__)
-app.secret_key ="6A464BA81846E"
+app.secret_key = "6A464BA81846E"
+app.config['SESSION_TYPE'] = 'filesystem'  # Use filesystem session storage
 CORS(app)  # Enable CORS for all routes
 
 CLIENT_ID = "936de7b258614e848dc30cdbe159ad0f"
 CLIENT_SECRET = "f7d53bbf159c4a60a8df92fdc7250c04"
 
-# FILE_PATH = "./uploads/"
+spotify = Spotify(CLIENT_ID, CLIENT_SECRET)
+analyze = Analyze()  # Instantiate Analyze class
 
-spotify = Spotify(CLIENT_ID,CLIENT_SECRET)
-
-# analyze = Analyze(FILE_PATH)
-
-
+user_emotion = None
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Ensure the upload folder exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
 
 @app.route('/login')
 def login():
@@ -35,6 +30,7 @@ def login():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    global user_emotion
     try:
         if 'file' not in request.files:
             return jsonify({'error': 'No file part in the request'}), 400
@@ -42,27 +38,31 @@ def upload_file():
         if file.filename == '':
             return jsonify({'error': 'No selected file'}), 400
         if file:
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
-            file = file.save(filepath)
-            return jsonify({'message': 'File uploaded successfully'}), 200
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            emotion_result = analyze.analyze_emotion(filepath)
+            user_emotion= emotion_result  # Store emotion in session
+            print(f"Emotion stored in session: {user_emotion}")  # Debug print
+            return jsonify({'message': 'File uploaded successfully', 'emotion': emotion_result}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
 @app.route('/')
 def index():
+    global user_emotion
     if 'spotify_token_info' not in session:
         return redirect('/login')
     
     token_info = session['spotify_token_info']
     if spotify.is_token_expired(token_info):
         token_info = spotify.refresh_access_token(token_info['refresh_token'])
-        
-    user_top_artists = spotify.final_data()
+    emotion = user_emotion
+    print(f"Emotion retrieved from session: {emotion}")  # Debug print
+    user_top_artists = spotify.final_data(emotion)  # Pass emotion to final_data()
     # Use token_info['access_token'] to make requests to Spotify API
 
     return jsonify(user_top_artists)
-
 
 @app.route('/callback')
 def callback():
