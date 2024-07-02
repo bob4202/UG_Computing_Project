@@ -53,7 +53,6 @@ def index():
     global user_emotion
     if 'spotify_token_info' not in session:
         return redirect('/login')
-    
     token_info = session['spotify_token_info']
     if spotify.is_token_expired(token_info):
         token_info = spotify.refresh_access_token(token_info['refresh_token'])
@@ -62,7 +61,7 @@ def index():
     user_top_artists = spotify.final_data(emotion)  # Pass emotion to final_data()
     # Use token_info['access_token'] to make requests to Spotify API
 
-    return jsonify(user_top_artists)
+    return redirect('/display')
 
 @app.route('/callback')
 def callback():
@@ -70,6 +69,32 @@ def callback():
     token_info = spotify.get_access_token(code)
     session['spotify_token_info'] = token_info
     return redirect('/')
+
+@app.route('/display')
+def display():
+    return redirect("http://localhost:3000/display")
+
+# @app.route('/logout')
+# def logout():
+#     return redirect('/end_session')
+
+# @app.route('/end_session', methods=['POST', 'GET'])
+# def end_session():
+#     for filename in os.listdir(app.config['UPLOAD_FOLDER']):
+#         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+#         os.remove(file_path)
+#     session.clear()
+#     return redirect(url_for('index'))
+
+# @app.after_request
+# def delete_uploaded_files(response):
+#     @app.after_this_request
+#     def remove_files(response):
+#         for filename in os.listdir(app.config['UPLOAD_FOLDER']):
+#             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+#             os.remove(file_path)
+#         return response
+#     return response
 
 if __name__ == '__main__':
     app.run(debug=True)

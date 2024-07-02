@@ -1,10 +1,15 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { AnimatePresence } from "framer-motion";
 
 export default function Login() {
+  const navigate = useNavigate();
+
   const handleLogin = () => {
     window.location.href = "http://127.0.0.1:5000/login";
+    setTimeout(() => {
+      navigate("/display");
+    }, 3000); // Adjust the timeout duration as needed
   };
 
   return (
@@ -12,7 +17,7 @@ export default function Login() {
       <motion.button
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
-        className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        className="bg-gradient-to-r from-green-400 to-green-100  transition ease-in-out delay-150  hover:scale-110 hover:bg-white-200 duration-300 px-6 py-2 rounded-full text-black font-roboto"
         onClick={handleLogin}
       >
         Login with Spotify
