@@ -10,13 +10,14 @@ class Spotify:
     def __init__(self, client_id, client_secret):
         self.client_id = client_id
         self.client_secret = client_secret
+        self.playlist_id = None
         self.oauth = SpotifyOAuth(
             client_id=self.client_id,
             client_secret=self.client_secret,
             redirect_uri=REDIRECT_URI,
             scope="user-top-read playlist-modify-private playlist-modify-public",
             cache_path=".spotifycache",
-            show_dialog=True
+            #show_dialog=True
         )
         self.sp = spotipy.Spotify(auth_manager=self.oauth)
 
@@ -159,6 +160,8 @@ class Spotify:
                 description="Playlist generated using the emotion analyzer"
             )
             user_playlist_id = user_playlist["id"]
+            self.playlist_id = user_playlist["id"] 
+            print(self.playlist_id)
             
             tracks_to_add = [track['id'] for track in music]
             self.sp.user_playlist_add_tracks(

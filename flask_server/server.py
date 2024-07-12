@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, redirect, session
+from flask import Flask, request, jsonify, redirect, session, send_from_directory
 from analyze import Analyze
 from spotify import Spotify
 from flask_cors import CORS
@@ -16,7 +16,6 @@ CLIENT_SECRET = "f7d53bbf159c4a60a8df92fdc7250c04"
 spotify = Spotify(CLIENT_ID, CLIENT_SECRET)
 analyze = Analyze()  # Instantiate Analyze class
 
-user_emotion = None
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -27,6 +26,10 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def login():
     auth_url = spotify.get_authorize_url()
     return redirect(auth_url)
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -42,9 +45,11 @@ def upload_file():
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
             emotion_result = analyze.analyze_emotion(filepath)
-            user_emotion= emotion_result  # Store emotion in session
+            user_emotion = emotion_result  # Store emotion in session
             print(f"Emotion stored in session: {user_emotion}")  # Debug print
-            return jsonify({'message': 'File uploaded successfully', 'emotion': emotion_result}), 200
+            file_url = f"http://127.0.0.1:5000/uploads/{filename}"  # URL to access the uploaded file
+            print(file_url)
+            return jsonify({'message': 'File uploaded successfully', 'emotion': emotion_result, 'file_url': file_url}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -74,27 +79,35 @@ def callback():
 def display():
     return redirect("http://localhost:3000/display")
 
-# @app.route('/logout')
-# def logout():
-#     return redirect('/end_session')
+@app.route('/delete_photo', methods=['POST'])
+def delete_photo():
+    try:
+        for filename in os.listdir(app.config['UPLOAD_FOLDER']):
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            os.remove(file_path)
+        return redirect('/playlist')  # Redirect to the Spotify playlist page
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/playlist')
+def show_playlist():
+    try:
+        # Delete the uploaded file
+        for filename in os.listdir(app.config['UPLOAD_FOLDER']):
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            os.remove(file_path)
 
-# @app.route('/end_session', methods=['POST', 'GET'])
-# def end_session():
-#     for filename in os.listdir(app.config['UPLOAD_FOLDER']):
-#         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-#         os.remove(file_path)
-#     session.clear()
-#     return redirect(url_for('index'))
+        # Redirect to Spotify playlist URL
+        playlist_id = spotify.playlist_id
+        if playlist_id:
+            playlist_url = f"https://open.spotify.com/playlist/{playlist_id}"
+            return redirect(playlist_url)
+        else:
+            return jsonify({'error': 'Playlist ID not found'}), 500
 
-# @app.after_request
-# def delete_uploaded_files(response):
-#     @app.after_this_request
-#     def remove_files(response):
-#         for filename in os.listdir(app.config['UPLOAD_FOLDER']):
-#             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-#             os.remove(file_path)
-#         return response
-#     return response
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)

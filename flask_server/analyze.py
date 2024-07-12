@@ -31,3 +31,7 @@ class Analyze:
         img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
         img_array = np.expand_dims(img_array, axis=-1)  # Add channel dimension
         return img_array
+    
+    def show_image (self, image_path):
+        img = Image.open(image_path)
+        return img

@@ -13,11 +13,12 @@ function Capture() {
       window.location.href = "/";
     }, 500); // Delay to allow the exit animation to complete
   };
+
   const goToLogin = () => {
     setIsExiting(true);
     setTimeout(() => {
       window.location.href = "/login";
-    }, 500); // Delay to allow the exit animation to complete
+    }, 500);
   };
 
   const handleFileChange = (event) => {
@@ -51,17 +52,17 @@ function Capture() {
       });
 
       if (response.ok) {
+        const data = await response.json();
+        console.log("Upload Response:", data); // Log the response
         alert("File uploaded successfully!");
+        localStorage.setItem("uploadedImageUrl", data.file_url); // Store the uploaded image URL in local storage
         goToLogin();
-        // Handle successful upload
       } else {
         const errorData = await response.json();
         alert(`Failed to upload file: ${errorData.error}`);
-        // Handle upload failure
       }
     } catch (error) {
       alert(`Error uploading file: ${error.message}`);
-      // Handle error
     }
   };
 
@@ -169,7 +170,7 @@ function Capture() {
                   className="bg-gradient-to-r from-green-400 to-green-100 transition ease-in-out delay-150 hover:scale-110 hover:bg-white-200 duration-300 px-6 py-2 rounded-full text-black font-roboto"
                   onClick={goToHome}
                 >
-                  Back to Home
+                  Cancel
                 </button>
               </div>
             </motion.div>
