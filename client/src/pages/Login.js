@@ -8,16 +8,26 @@ export default function Login() {
   const [emotion, setEmotion] = useState(null);
 
   useEffect(() => {
-    // Retrieve the image URL and emotion from local storage when the component mounts
+    // Fetch the emotion from the server
+    const fetchEmotion = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:5000/get_emotion");
+        const data = await response.json();
+        if (data.emotion) {
+          // Convert emotion to uppercase
+          setEmotion(data.emotion.toUpperCase());
+        }
+      } catch (error) {
+        console.error("Error fetching emotion:", error);
+      }
+    };
+
+    fetchEmotion();
+
+    // Retrieve the image URL from local storage
     const storedImageUrl = localStorage.getItem("uploadedImageUrl");
-    let storedEmotion = localStorage.getItem("userEmotion");
     if (storedImageUrl) {
       setImageUrl(storedImageUrl);
-    }
-    if (storedEmotion) {
-      // Convert emotion to uppercase
-      storedEmotion = storedEmotion.toUpperCase();
-      setEmotion(storedEmotion);
     }
   }, []);
 
@@ -36,7 +46,7 @@ export default function Login() {
             <img
               src={imageUrl}
               alt="Uploaded"
-              className="w-20  h-24 rounded-lg"
+              className="w-20 h-24 rounded-lg"
             />
           </div>
         )}

@@ -22,6 +22,11 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Ensure the upload folder exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+
+temp_emotion = {
+    'user_emotion': None
+}
+
 @app.route('/login')
 def login():
     auth_url = spotify.get_authorize_url()
@@ -45,6 +50,7 @@ def upload_file():
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
             emotion_result = analyze.analyze_emotion(filepath)
+            temp_emotion['user_emotion'] = emotion_result
             user_emotion = emotion_result  # Store emotion in session
             print(f"Emotion stored in session: {user_emotion}")  # Debug print
             file_url = f"http://127.0.0.1:5000/uploads/{filename}"  # URL to access the uploaded file
@@ -55,13 +61,13 @@ def upload_file():
 
 @app.route('/')
 def index():
-    global user_emotion
     if 'spotify_token_info' not in session:
         return redirect('/login')
     token_info = session['spotify_token_info']
     if spotify.is_token_expired(token_info):
         token_info = spotify.refresh_access_token(token_info['refresh_token'])
-    emotion = user_emotion
+    emotion = temp_emotion['user_emotion']
+    print(emotion)
     print(f"Emotion retrieved from session: {emotion}")  # Debug print
     user_top_artists = spotify.final_data(emotion)  # Pass emotion to final_data()
     # Use token_info['access_token'] to make requests to Spotify API
@@ -107,6 +113,11 @@ def show_playlist():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/get_emotion', methods=['GET'])
+def get_emotion():
+    emotion = temp_emotion['user_emotion']
+    return jsonify({'emotion': emotion})
 
 
 if __name__ == '__main__':

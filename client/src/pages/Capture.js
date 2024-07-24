@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { AnimatePresence } from "framer-motion";
 import { IoCameraSharp } from "react-icons/io5";
@@ -6,6 +6,32 @@ import { IoCameraSharp } from "react-icons/io5";
 function Capture() {
   const [isExiting, setIsExiting] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [capturedImage, setCapturedImage] = useState(null);
+  const [isCameraOn, setIsCameraOn] = useState(false);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    if (isCameraOn) {
+      const startVideo = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
+          videoRef.current.srcObject = stream;
+        } catch (err) {
+          console.error("Error accessing webcam: ", err);
+        }
+      };
+      startVideo();
+      return () => {
+        if (videoRef.current && videoRef.current.srcObject) {
+          const tracks = videoRef.current.srcObject.getTracks();
+          tracks.forEach((track) => track.stop());
+        }
+      };
+    }
+  }, [isCameraOn]);
 
   const goToHome = () => {
     setIsExiting(true);
@@ -36,14 +62,28 @@ function Capture() {
     }
   };
 
+  const captureImage = () => {
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext("2d");
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      setCapturedImage(blob);
+      setIsCameraOn(false); // Turn off the camera preview after capturing the image
+    }, "image/png");
+  };
+
   const handleUpload = async () => {
-    if (!selectedFile) {
-      alert("Please select a file first!");
+    const fileToUpload = capturedImage || selectedFile;
+    if (!fileToUpload) {
+      alert("Please select or capture a file first!");
       return;
     }
 
     const formData = new FormData();
-    formData.append("file", selectedFile);
+    formData.append("file", fileToUpload);
 
     try {
       const response = await fetch("http://127.0.0.1:5000/upload", {
@@ -92,9 +132,28 @@ function Capture() {
               transition={{ duration: 1.5 }}
             >
               <div className="flex items-center justify-center">
-                <button className="bg-gradient-to-r from-green-400 to-green-100 transition ease-in-out delay-150 hover:scale-110 hover:bg-white-200 duration-300 px-6 py-2 rounded-full text-black font-roboto">
-                  <IoCameraSharp size={30} />
-                </button>
+                {/* Show the camera button only if the camera is off and no image is captured */}
+                {!capturedImage && !isCameraOn && (
+                  <button
+                    className="bg-gradient-to-r from-green-400 to-green-100 transition ease-in-out delay-150 hover:scale-110 hover:bg-white-200 duration-300 px-6 py-2 rounded-full text-black font-roboto"
+                    onClick={() => setIsCameraOn(true)}
+                  >
+                    <IoCameraSharp size={30} />
+                  </button>
+                )}
+                {isCameraOn && (
+                  <video
+                    ref={videoRef}
+                    style={{
+                      display: "block",
+                      marginTop: "20px",
+                      width: "100%",
+                      maxWidth: "500px",
+                    }}
+                    autoPlay
+                  />
+                )}
+                <canvas ref={canvasRef} style={{ display: "none" }} />
               </div>
             </motion.div>
             <motion.div
@@ -135,12 +194,20 @@ function Capture() {
                     Upload
                   </button>
                 </label>
-                {selectedFile && (
+                {(selectedFile || capturedImage) && (
                   <button
                     className="bg-gradient-to-r from-green-400 to-green-100 transition ease-in-out delay-150 hover:scale-110 hover:bg-white-200 duration-300 px-6 py-2 rounded-full text-black font-roboto ml-2"
                     onClick={handleUpload}
                   >
                     Submit
+                  </button>
+                )}
+                {isCameraOn && !capturedImage && (
+                  <button
+                    className="bg-gradient-to-r from-green-400 to-green-100 transition ease-in-out delay-150 hover:scale-110 hover:bg-white-200 duration-300 px-6 py-2 rounded-full text-black font-roboto ml-2"
+                    onClick={captureImage}
+                  >
+                    Capture
                   </button>
                 )}
               </div>

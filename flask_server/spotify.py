@@ -154,7 +154,7 @@ class Spotify:
             user_id = self.sp.current_user()["id"]
             user_playlist = self.sp.user_playlist_create(
                 user=user_id,
-                name=emotion,
+                name=emotion.capitalize(),
                 public=False,
                 collaborative=False,
                 description="Playlist generated using the emotion analyzer"
