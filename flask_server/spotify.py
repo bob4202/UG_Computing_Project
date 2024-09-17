@@ -1,7 +1,5 @@
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-from collections import defaultdict
-import json
 import time
 
 REDIRECT_URI = "http://127.0.0.1:5000/callback"  # Adjust port as per your Flask app port
@@ -17,7 +15,7 @@ class Spotify:
             redirect_uri=REDIRECT_URI,
             scope="user-top-read playlist-modify-private playlist-modify-public",
             cache_path=".spotifycache",
-            #show_dialog=True
+            show_dialog=True
         )
         self.sp = spotipy.Spotify(auth_manager=self.oauth)
 
