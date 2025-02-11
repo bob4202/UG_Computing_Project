@@ -6,12 +6,12 @@ from werkzeug.utils import secure_filename
 import os
 
 app = Flask(__name__)
-app.secret_key = "6A464BA81846E"
+app.secret_key = "APP-SECRET-KEY"
 app.config['SESSION_TYPE'] = 'filesystem'  # Use filesystem session storage
 CORS(app)  # Enable CORS for all routes
 
-CLIENT_ID = "936de7b258614e848dc30cdbe159ad0f"
-CLIENT_SECRET = "f7d53bbf159c4a60a8df92fdc7250c04"
+CLIENT_ID = "YOUR-CLIENT-ID-FROM-SPOTIFY"
+CLIENT_SECRET = "YOUR-CLIENT-SECRET-FROM-SPOTIFY"
 
 spotify = Spotify(CLIENT_ID, CLIENT_SECRET)
 analyze = Analyze()  # Instantiate Analyze class
